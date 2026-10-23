@@ -6,19 +6,19 @@ import websockets
 from telegram.error import TelegramError
 
 from arcus_bot.config import ADDR, WS, log
-from arcus_bot.fills import fetch_fills, format_fill
+from arcus_bot.fills import fetch_fills, trade_card
 from arcus_bot.store import store
 
 
 async def notify(bot, address, idx, text):
     for chat_id in store.chats(address, idx):
         try:
-            await bot.send_message(chat_id, text, parse_mode="HTML", disable_web_page_preview=True)
+            await bot.send_message(chat_id, text, disable_web_page_preview=True)
         except TelegramError as exc:
             log.warning("send failed chat=%s %s", chat_id, exc)
 
 
-async def ingest(bot, address, idx, fills, alert):
+async def ingest(bot, client, address, idx, fills, alert):
     fresh = []
     for fill in fills:
         trade_id = str(fill.get("tradeId") or "")
@@ -32,9 +32,9 @@ async def ingest(bot, address, idx, fills, alert):
     if len(fresh) > 12:
         skipped = len(fresh) - 8
         fresh = fresh[-8:]
-        await notify(bot, address, idx, f"{skipped} earlier fills while the bot was offline")
+        await notify(bot, address, idx, f"⏱ {skipped} earlier trades while the bot was offline")
     for fill in fresh:
-        await notify(bot, address, idx, format_fill(address, idx, fill))
+        await notify(bot, address, idx, await trade_card(client, address, idx, fill))
 
 
 async def seed(client, address, idx):
@@ -58,7 +58,7 @@ async def sync_subs(app, ws):
         if last:
             try:
                 fills = await fetch_fills(client, addr, idx, limit=100, from_us=last)
-                await ingest(app.bot, addr, idx, fills, alert=True)
+                await ingest(app.bot, client, addr, idx, fills, alert=True)
             except httpx.HTTPError as exc:
                 log.warning("backfill %s %s", addr, exc)
         await ws.send(json.dumps({
@@ -94,7 +94,7 @@ async def on_message(app, raw):
         return
     idx = int(msg.get("accountIndex") or 0)
     fills = (msg.get("contents") or {}).get("fills") or []
-    await ingest(app.bot, address, idx, fills, alert=True)
+    await ingest(app.bot, app.bot_data["http"], address, idx, fills, alert=True)
 
 
 async def run_ws(app):
