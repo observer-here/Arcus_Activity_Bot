@@ -161,13 +161,11 @@ async def trade_card(client, address, idx, fill):
     elif action == "FLIP":
         title, icon = "Flipped", "🔄"
     else:
-        title = "Added" if action == "ADD" else "Opened"
-        icon = "🟢" if side == "long" else "🔴"
+        title, icon = ("Added", "➕") if action == "ADD" else ("Opened", "📌")
 
     lines = [
         f"{icon} {title}",
-        f"ticker: ${(fill.get('marketDisplayName') or '?').split('-')[0]}",
-        f"type: {side}",
+        f"ticker: {'🟢' if side == 'long' else '🔴'} ${(fill.get('marketDisplayName') or '?').split('-')[0]}",
         f"value: {dollars(value)}",
         f"lev: {f'{lev}x' if lev else '?'}",
     ]
@@ -175,7 +173,7 @@ async def trade_card(client, address, idx, fill):
         lines.append(f"margin: {dollars(value / lev) if lev else '?'}")
         lines.append(f"entry: {price_text(entry)}")
         if action == "ADD" and pos:
-            lines.append(f"total: {dollars(pos.get('positionValueNotional'))}")
+            lines.append(f"total: {dollars(abs(d(pos.get('positionValueNotional'))))}")
     elif action == "CLOSE":
         lines.append(f"entry: {price_text(entry)}")
         lines.append(f"exit: {price_text(price)}")
@@ -186,7 +184,7 @@ async def trade_card(client, address, idx, fill):
             roi = f" ({'-' if pct < 0 else '+'}{abs(pct):.1f}%)"
         lines.append(f"pnl: {signed(pnl)}{roi}")
         if title == "Reduced":
-            lines.append(f"left: {dollars(d(pos.get('positionValueNotional')))}")
+            lines.append(f"left: {dollars(abs(d(pos.get('positionValueNotional'))))}")
     else:
         lines.append(f"pnl: {signed(pnl)}")
     return "\n".join(lines)
