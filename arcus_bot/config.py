@@ -10,7 +10,7 @@ ENV_PATH = ROOT / ".env"
 REST = "https://api.arcus.xyz"
 WS = "wss://api.arcus.xyz/v1/ws"
 ADDR = re.compile(r"^0x[0-9a-fA-F]{40}$")
-MAX_PER_CHAT = 30
+MAX_PER_CHAT = 10
 
 log = logging.getLogger("arcus")
 

@@ -4,10 +4,10 @@ import os
 
 import httpx
 from telegram import BotCommand
-from telegram.ext import Application, CommandHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 from arcus_bot.config import load_env
-from arcus_bot.handlers import add, list_watches, remove, start, trades
+from arcus_bot.handlers import add, cancel, list_watches, on_text, remove, start, trades
 from arcus_bot.watch import run_ws
 
 
@@ -16,7 +16,8 @@ async def post_init(app: Application):
         BotCommand("add", "Watch a wallet"),
         BotCommand("remove", "Stop watching a wallet"),
         BotCommand("list", "Show your watchlist"),
-        BotCommand("trades", "Latest trades for a wallet"),
+        BotCommand("trades", "Latest trades of a wallet"),
+        BotCommand("cancel", "Cancel the current step"),
         BotCommand("help", "How this bot works"),
     ])
     app.bot_data["q"] = asyncio.Queue()
@@ -51,7 +52,8 @@ def main():
     app.add_handler(CommandHandler("remove", remove))
     app.add_handler(CommandHandler("list", list_watches))
     app.add_handler(CommandHandler("trades", trades))
-    app.add_handler(CommandHandler("fills", trades))
+    app.add_handler(CommandHandler("cancel", cancel))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
     app.run_polling()
 
 

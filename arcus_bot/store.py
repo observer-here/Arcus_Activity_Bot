@@ -26,20 +26,17 @@ class Store:
         )
 
     def add(self, chat_id, address, indexes):
-        have = self.conn.execute(
-            "SELECT COUNT(*) FROM watches WHERE chat_id=?", (chat_id,)
-        ).fetchone()[0]
+        wallets = {row[0] for row in self.list(chat_id)}
+        if address not in wallets and len(wallets) >= MAX_PER_CHAT:
+            return None
         added = []
         for idx in indexes:
-            if have >= MAX_PER_CHAT:
-                break
             cur = self.conn.execute(
                 "INSERT OR IGNORE INTO watches(chat_id, address, account_index) VALUES (?,?,?)",
                 (chat_id, address, idx),
             )
             if cur.rowcount:
                 added.append(idx)
-                have += 1
         self.conn.commit()
         return added
 

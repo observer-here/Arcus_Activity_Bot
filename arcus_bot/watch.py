@@ -6,14 +6,14 @@ import websockets
 from telegram.error import TelegramError
 
 from arcus_bot.config import ADDR, WS, log
-from arcus_bot.fills import fetch_fills, trade_card
+from arcus_bot.fills import fetch_fills, merge_orders, short, trade_card
 from arcus_bot.store import store
 
 
 async def notify(bot, address, idx, text):
     for chat_id in store.chats(address, idx):
         try:
-            await bot.send_message(chat_id, text, disable_web_page_preview=True)
+            await bot.send_message(chat_id, f"{text}\n👛 {short(address)}", disable_web_page_preview=True)
         except TelegramError as exc:
             log.warning("send failed chat=%s %s", chat_id, exc)
 
@@ -28,7 +28,7 @@ async def ingest(bot, client, address, idx, fills, alert):
             fresh.append(fill)
     if not alert or not fresh:
         return
-    fresh.sort(key=lambda row: int(row.get("createdAt") or 0))
+    fresh = merge_orders(fresh)
     if len(fresh) > 12:
         skipped = len(fresh) - 8
         fresh = fresh[-8:]
